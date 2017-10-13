@@ -1,0 +1,50 @@
+- name: Configure primary back-up profiles for sites
+  hosts: web:&{{ env }}
+  become: yes
+  roles:
+    - Stouts.backup
+  vars:
+    backup_user: "{{ admin_user }}"
+    backup_mysql_user: "{{ site_env.db_user }}"
+    backup_mysql_pass: "{{ site_env.db_password }}"
+    backup_target_user: "{{ site_backup.primary_target_user }}"
+    backup_target_pass: "{{ vault_site_backup.primary_target_password }}"
+    backup_target: "{{ site_backup.primary_target }}"
+    backup_profiles:
+      - name: {{ site_domain }}_data_primary
+          schedule: 30 0 * * *
+	  source: mysql://{{ site_env.db_name }}
+	  user: {{ backup_mysql_user }}
+      - name: {{ site_domain }}_media_primary
+          schedule: 30 1 * * *
+	  source: /srv/www/{{ site_domain }}/web/wp-content/uploads/
+  with_dict: "{{ wordpress_sites }}"
+  when:
+    - site_backup.primary_target_user is defined
+    - vault_site_backup.primary_target_password is defined
+    - site_backup.primary_target is defined
+
+- name: Configure secondary back-up profiles for sites
+  hosts: web:&{{ env }}
+  become: yes
+  roles:
+    -Stouts.backup
+  vars:
+    backup_user: "{{ admin_user }}"
+    backup_mysql_user: "{{ site_env.db_user }}"
+    backup_mysql_pass: "{{ site_env.db_password }}"
+    backup_target_user: "{{ site_backup.secondary_target_user }}"
+    backup_target_pass: "{{ vault_site_backup.secondary_target_password }}"
+    backup_target: "{{ site_backup.secondary_target }}"
+       - name: {{ site_domain }}_data_secondary
+          schedule: 30 2 * * *
+	  source: mysql://{{site_domain.db_name }}
+	  user: {{ backup_mysql_user }}
+       - name: {{ site_domain }}_media_secondary
+          schedule: 30 3 * * *
+	  source: /srv/www/{{site_domain }}/web/wp-content/uploads/
+  with_dict: "{{ wordpress_sites }}"
+  when:
+    - site_backup.secondary_target_user is defined
+    - vault_site_backup.secondary_target_password is defined
+    - site_backup.secondary_target is defined
