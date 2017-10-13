@@ -19,9 +19,7 @@
   version: 2.1.3
 
 - name: trellis-backup
-  src: guilro.trellis-backup
-  version: 1.0.0
+  src: https://github.com/SorenTech/trellis-backup-role
 
-- name: Stouts.backup
-  src: Stouts.backup
-  version: 3.4.5
+- name: lafranceinsoumise.backup
+  version: 3.6.1
