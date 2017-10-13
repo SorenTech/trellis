@@ -23,6 +23,6 @@ wordpress_sites:
       enabled: true
       auto: true
       target: scp://user@example.com/example.com_backups # any location supported by duplicity
-      schedule: '0 4 * * *' # cron time of backups (change this value)
+      schedule: '30 1 * * *' # cron time of backups (change this value)
       purge: false # switch to true to enable automatic purging of old backups
       
