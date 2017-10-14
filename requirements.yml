@@ -23,3 +23,7 @@
 
 - name: lafranceinsoumise.backup
   version: 3.6.1
+
+- name: unattended-upgrades
+  src: jnv.unattended-upgrades
+  version: 1.3.0
