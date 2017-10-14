@@ -19,6 +19,14 @@
       register: python_check
       changed_when: not python_check.stdout | search('/usr/bin/python')
 
+- name: Configure unattended upgrades
+  hosts: web:&{{ env }}
+  become: yes
+  roles:
+    - role: jvn.unattended-upgrades
+      unattended_mail: webmaster@sorennetwork.com
+      unattended_mail_only_on_error: true
+
 - name: WordPress Server - Install LEMP Stack with PHP 7.1 and MariaDB MySQL
   hosts: web:&{{ env }}
   become: yes
