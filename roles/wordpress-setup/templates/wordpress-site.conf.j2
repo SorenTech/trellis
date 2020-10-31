@@ -78,7 +78,9 @@ server {
   ssl_dhparam /etc/nginx/ssl/dhparams.pem;
   ssl_buffer_size 1400; # 1400 bytes to fit in one MTU
 
+  {% if item.value.ssl.provider | default('manual') != 'self-signed' -%}
   add_header Strict-Transport-Security "max-age={{ [hsts_max_age, hsts_include_subdomains, hsts_preload] | reject('none') | join('; ') }}";
+  {% endif -%}
 
   {% if item.value.ssl.client_cert_url is defined -%}
   ssl_verify_client       on;
@@ -90,7 +92,7 @@ server {
   ssl_certificate_key     {{ nginx_path }}/ssl/{{ item.value.ssl.key | basename }};
 
   {% elif item.value.ssl.provider | default('manual') == 'letsencrypt' -%}
-  ssl_certificate         {{ nginx_path }}/ssl/letsencrypt/{{ item.key }}-{{ letsencrypt_cert_ids[item.key] }}-bundled.cert;
+  ssl_certificate         {{ nginx_path }}/ssl/letsencrypt/{{ item.key }}-bundled.cert;
   ssl_certificate_key     {{ nginx_path }}/ssl/letsencrypt/{{ item.key }}.key;
 
   {% elif item.value.ssl.provider | default('manual') == 'self-signed' -%}
@@ -108,6 +110,7 @@ server {
   {% endblock -%}
 
   {% block includes_d -%}
+  include includes.d/all/*.conf;
   include includes.d/{{ item.key }}/*.conf;
 
   {% endblock -%}
@@ -115,6 +118,47 @@ server {
   {% block location_uploads_php -%}
   # Prevent PHP scripts from being executed inside the uploads folder.
   location ~* /app/uploads/.*\.php$ {
+    deny all;
+  }
+  {% endblock %}
+
+  {% block blade_twig_templates -%}
+  # Prevent Blade and Twig templates from being accessed directly.
+  location ~* \.(blade\.php|twig)$ {
+    deny all;
+  }
+  {% endblock %}
+
+  {% block dependency_managers -%}
+  # composer
+  location ~* composer\.(json|lock)$ {
+    deny all;
+  }
+
+  location ~* composer/installed\.json$ {
+    deny all;
+  }
+
+  location ~* auth\.json$ {
+    deny all;
+  }
+
+  # npm
+  location ~* package(-lock)?\.json$ {
+    deny all;
+  }
+
+  # yarn
+  location ~* yarn\.lock$ {
+    deny all;
+  }
+
+  # bundler
+  location ~* Gemfile(\.lock)?$ {
+    deny all;
+  }
+
+  location ~* gems\.(rb|locked)?$ {
     deny all;
   }
   {% endblock %}
@@ -160,6 +204,28 @@ server {
 
   {% endblock %}
 
+  {% block embed_security -%}
+  {% if item.value.nginx_embed_security | default(nginx_embed_security | default(true)) -%}
+  add_header Content-Security-Policy "frame-ancestors 'self'" always;
+
+  # Conditional X-Frame-Options until https://core.trac.wordpress.org/ticket/40020 is resolved
+  set $x_frame_options SAMEORIGIN;
+  if ($arg_customize_changeset_uuid) {
+    set $x_frame_options "";
+  }
+  add_header X-Frame-Options $x_frame_options always;
+
+  {% endif -%}
+  {% endblock -%}
+
+  {% block robots_tag_header -%}
+  {% if robots_tag_header_enabled -%}
+  # Prevent search engines from indexing non-production environments
+  add_header X-Robots-Tag "noindex, nofollow" always;
+
+  {% endif -%}
+  {% endblock -%}
+
   {% block location_php -%}
   location ~ \.php$ {
     {% block location_php_basic -%}
@@ -174,6 +240,7 @@ server {
     fastcgi_cache_valid {{ item.value.cache.duration | default(nginx_cache_duration) }};
     fastcgi_cache_bypass $skip_cache;
     fastcgi_no_cache $skip_cache;
+    fastcgi_cache_background_update {{ item.value.cache.background_update | default(nginx_cache_background_update) }};
 
     {% endif -%}
     {% endblock -%}

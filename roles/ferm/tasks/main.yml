@@ -8,9 +8,8 @@
 
 - name: ensure ferm is installed
   apt:
-    pkg: ferm
-    state: latest
-    update_cache: true
+    name: "{{ ferm_package }}"
+    state: "{{ ferm_package_state | default(apt_security_package_state) }}"
     cache_valid_time: "{{ apt_cache_valid_time }}"
     install_recommends: no
   notify:
@@ -66,7 +65,7 @@
 - name: ensure iptables rules are enabled
   command: ferm --slow /etc/ferm/ferm.conf
   changed_when: false
-  when: ferm_enabled
+  when: ferm_enabled | bool
 
 - name: ensure iptables rules are disabled
   command: ferm --flush /etc/ferm/ferm.conf
